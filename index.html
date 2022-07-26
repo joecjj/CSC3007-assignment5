@@ -1,0 +1,116 @@
+<!-- Reference from https://leafletjs.com/examples.html && https://github.com/ZijingPeng/leaflet-tooltip-layout-->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.8.0/leaflet.css"
+    />
+  </head>
+  <style>
+    #map {
+      width: 1000px;
+      height: 600px;
+    }
+  </style>
+  <body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.8.0/leaflet.js"></script>
+    <script
+      type="text/javascript"
+      src="/path/to/leaflet-tooltip-layout.js"
+    ></script>
+  </body>
+</html>
+
+<div id="map"></div>
+
+<script>
+  // api url
+  const api_url = "https://api.data.gov.sg/v1/environment/psi";
+  // Defining async function
+  async function getapi(url) {
+    // Storing response
+    const response = await fetch(url);
+    // Storing data in form of JSON
+    var data = await response.json();
+    drawMap(data);
+  }
+
+  getapi(api_url);
+  // draw map from onemap
+  function drawMap(data) {
+    let regionOverall = data["region_metadata"];
+    let regionPsi = data.items[0].readings.psi_twenty_four_hourly;
+    var regionLatList = [];
+    var regionPsiList = [];
+    regionOverall.forEach((region) => {
+      regionName = region.name;
+      if (regionName != "national") {
+        let latList = [
+          region.label_location.latitude,
+          region.label_location.longitude,
+        ];
+        regionLatList.push(latList);
+        regionPsiList.push(
+          data.items[0].readings.psi_twenty_four_hourly[regionName]
+        );
+      }
+    });
+    var basemap = L.tileLayer(
+      "https://maps-{s}.onemap.sg/v3/Grey/{z}/{x}/{y}.png",
+      {
+        detectRetina: true,
+        maxZoom: 18,
+        minZoom: 11,
+        //Do not remove this attribution
+        attribution:
+          '<img src="https://www.onemap.gov.sg/docs/maps/images/oneMap64-01.png" style="height:20px;width:20px;"/> OneMap | Map data &copy; contributors, <a href="http://SLA.gov.sg">Singapore Land Authority</a>',
+      }
+    );
+
+    let map = new L.Map("map", {
+      center: [1.347833, 103.809357],
+      zoom: 12,
+      maxBounds: L.latLngBounds(L.latLng(1.0, 103.5), L.latLng(1.5, 104.3)),
+    }).addLayer(basemap);
+
+    //Quick and dirty way to add markers
+    regionLatList.forEach((lat, index) => {
+        psi = regionPsiList[index];
+        color = getColor(psi);
+      var circle = L.circle(lat, {
+        color: color,
+        fillColor: color,
+        fillOpacity: 0.5,
+        radius: 2000,
+      }).addTo(map);
+      circle.bindTooltip("PSI: " + psi, {
+        permanent: true,
+        className: "durak_label",
+        direction: "center",
+        offset: [0, 0],
+      });
+    });
+  }
+// quick and dirty color
+  function getColor(psi)
+  {
+    if (psi >= 0 && psi <=50)
+    {
+        return "green"
+    }
+    if (psi >=51 && psi <=100)
+    {
+        return "yellow"
+    }
+    if (psi >= 101 && psi<= 200)
+    {
+        return "red"
+    }
+    if (psi >=201)
+    {
+        return "black"
+    }
+  }
+</script>
